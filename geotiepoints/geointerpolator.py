@@ -24,7 +24,7 @@
 """
 
 import numpy as np
-from numpy import arccos, sign, rad2deg, sqrt, arcsin
+from numpy import arccos, sign, rad2deg, sqrt, arcsin, memmap
 from geotiepoints.interpolator import Interpolator
 
 EARTH_RADIUS = 6370997.0
@@ -80,8 +80,12 @@ class GeoInterpolator(Interpolator):
 
     def interpolate(self):
         newx, newy, newz = Interpolator.interpolate(self)
-        lon = get_lons_from_cartesian(newx, newy)
-        lat = get_lats_from_cartesian(newx, newy, newz)
+        # Use memmap for lower memory usage
+        shape = newx.shape
+        lat = memmap('.lats.npz', dtype=float64, mode='w+', shape=shape)
+        lon = memmap('.lons.npz', dtype=float64, mode='w+', shape=shape)
+        lon[:] = get_lons_from_cartesian(newx, newy)[:]
+        lat[:] = get_lats_from_cartesian(newx, newy, newz)[:]
         return lon, lat
 
 def get_lons_from_cartesian(x__, y__):
