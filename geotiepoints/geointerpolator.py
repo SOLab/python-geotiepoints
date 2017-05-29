@@ -22,7 +22,7 @@
 
 """Geographical interpolation (lon/lats).
 """
-# import tempfile
+import tempfile
 
 from numpy import arccos, sign, rad2deg, sqrt, arcsin, memmap, float64, radians, cos, sin, where, logical_and, less, \
     greater

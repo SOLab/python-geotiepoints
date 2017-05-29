@@ -22,7 +22,7 @@
 
 """Generic interpolation routines.
 """
-import tempfile
+# import tempfile
 
 from numpy import arange, float64, concatenate, hstack, expand_dims, array, vstack, memmap, argwhere, meshgrid, empty, \
     logical_and, all, asarray
