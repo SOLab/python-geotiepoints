@@ -22,6 +22,8 @@
 
 """Generic interpolation routines.
 """
+import tempfile
+
 from numpy import arange, float64, concatenate, hstack, expand_dims, array, vstack, memmap, argwhere, meshgrid, empty, \
     logical_and, all, asarray
 from scipy.interpolate import RectBivariateSpline, splev, splrep
@@ -99,7 +101,7 @@ class Interpolator(object):
         self.hcol_indices = final_grid[1]
         self.chunk_size = chunk_size
 
-        # Check indeces to be an array
+        # Check indices to be an array
         if isinstance(self.row_indices, (tuple, list)):
             self.row_indices = asarray(self.row_indices)
         if isinstance(self.col_indices, (tuple, list)):
@@ -109,7 +111,7 @@ class Interpolator(object):
         if isinstance(self.hcol_indices, (tuple, list)):
             self.hcol_indices = asarray(self.hcol_indices)
 
-        # convert indeces to uint16 (0 to 65535) to save up to 20% of memory
+        # convert indices to uint16 (0 to 65535) to save up to 20% of memory
         self.row_indices = self.row_indices.astype('uint16')
         self.col_indices = self.col_indices.astype('uint16')
         self.hrow_indices = self.hrow_indices.astype('uint16')
@@ -120,11 +122,19 @@ class Interpolator(object):
         else:
             self.tie_data = list(data)
 
-        shape = (len(self.hrow_indices), len(self.hcol_indices))
+        # shape = (len(self.hrow_indices), len(self.hcol_indices))
+        # self.new_data = []
+        # for num in range(len(self.tie_data)):
+        #     # Use memmap for lower memory usage
+        #     # new_data_f = tempfile.NamedTemporaryFile(dir='/home/mag/Documents/repos/solab/PySOL/notebooks/POSADA/')
+        #     new_data_f = tempfile.NamedTemporaryFile()
+        #     new_data_f.name = '.new_data_' + str(num) + '.npz'
+        #     self.new_data.append([memmap(new_data_f.name, dtype=float64, mode='w+', shape=shape)])
+
         self.new_data = []
         for num in range(len(self.tie_data)):
-            # Use memmap for lower memory usage
-            self.new_data.append([memmap('.new_data' + str(num) + '.npz', dtype=float64, mode='w+', shape=shape)])
+            self.new_data.append([])
+
 
         self.kx_, self.ky_ = kx_, ky_
 

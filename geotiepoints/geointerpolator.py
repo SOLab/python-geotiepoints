@@ -22,6 +22,7 @@
 
 """Geographical interpolation (lon/lats).
 """
+# import tempfile
 
 from numpy import arccos, sign, rad2deg, sqrt, arcsin, memmap, float64, radians, cos, sin, where, logical_and, less, \
     greater
@@ -82,8 +83,15 @@ class GeoInterpolator(Interpolator):
         newx, newy, newz = Interpolator.interpolate(self)
         # Use memmap for lower memory usage
         shape = newx.shape
-        lat = memmap('.lats.npz', dtype=float64, mode='w+', shape=shape)
-        lon = memmap('.lons.npz', dtype=float64, mode='w+', shape=shape)
+        # lat_f = tempfile.NamedTemporaryFile(dir='/home/mag/Documents/repos/solab/PySOL/notebooks/POSADA/')
+        lat_f = tempfile.NamedTemporaryFile()
+        lat_f.name = '.lats.npz'
+        lat = memmap(lat_f.name, dtype=float64, mode='w+', shape=shape)
+        # lon_f = tempfile.NamedTemporaryFile(dir='/home/mag/Documents/repos/solab/PySOL/notebooks/POSADA/')
+        lon_f = tempfile.NamedTemporaryFile()
+        lon_f.name = '.lons.npz'
+        lon = memmap(lon_f.name, dtype=float64, mode='w+', shape=shape)
+
         lon[:] = get_lons_from_cartesian(newx, newy)[:]
         lat[:] = get_lats_from_cartesian(newx, newy, newz)[:]
         return lon, lat
