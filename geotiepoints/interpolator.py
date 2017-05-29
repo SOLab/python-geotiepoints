@@ -22,18 +22,19 @@
 
 """Generic interpolation routines.
 """
-import numpy as np
+from numpy import arange, float64, concatenate, hstack, expand_dims, array, vstack, memmap, argwhere, meshgrid, empty, \
+    logical_and, all, asarray
 from scipy.interpolate import RectBivariateSpline, splev, splrep
 
 
 def generic_modis5kmto1km(*data5km):
     """Getting 1km data for modis from 5km tiepoints.
     """
-    cols5km = np.arange(2, 1354, 5)
-    cols1km = np.arange(1354)
+    cols5km = arange(2, 1354, 5)
+    cols1km = arange(1354)
     lines = data5km[0].shape[0] * 5
-    rows5km = np.arange(2, lines, 5)
-    rows1km = np.arange(lines)
+    rows5km = arange(2, lines, 5)
+    rows1km = arange(lines)
 
     along_track_order = 1
     cross_track_order = 3
@@ -47,6 +48,7 @@ def generic_modis5kmto1km(*data5km):
     satint.fill_borders("y", "x")
     return satint.interpolate()
 
+
 # NOTE: extrapolate on a sphere ?
 
 
@@ -54,8 +56,8 @@ def _linear_extrapolate(pos, data, xev):
     """
 
     >>> import numpy as np
-    >>> pos = np.array([1, 2])
-    >>> data = np.arange(10).reshape((2, 5), order="F")
+    >>> pos = array([1, 2])
+    >>> data = arange(10).reshape((2, 5), order="F")
     >>> xev = 5
     >>> _linear_extrapolate(pos, data, xev)
     array([  4.,   6.,   8.,  10.,  12.])
@@ -96,14 +98,33 @@ class Interpolator(object):
         self.hrow_indices = final_grid[0]
         self.hcol_indices = final_grid[1]
         self.chunk_size = chunk_size
+
+        # Check indeces to be an array
+        if isinstance(self.row_indices, (tuple, list)):
+            self.row_indices = asarray(self.row_indices)
+        if isinstance(self.col_indices, (tuple, list)):
+            self.col_indices = asarray(self.col_indices)
+        if isinstance(self.hrow_indices, (tuple, list)):
+            self.hrow_indices = asarray(self.hrow_indices)
+        if isinstance(self.hcol_indices, (tuple, list)):
+            self.hcol_indices = asarray(self.hcol_indices)
+
+        # convert indeces to uint16 (0 to 65535) to save up to 20% of memory
+        self.row_indices = self.row_indices.astype('uint16')
+        self.col_indices = self.col_indices.astype('uint16')
+        self.hrow_indices = self.hrow_indices.astype('uint16')
+        self.hcol_indices = self.hcol_indices.astype('uint16')
+
         if not isinstance(data, (tuple, list)):
             self.tie_data = [data]
         else:
             self.tie_data = list(data)
 
+        shape = (len(self.hrow_indices), len(self.hcol_indices))
         self.new_data = []
         for num in range(len(self.tie_data)):
-            self.new_data.append([])
+            # Use memmap for lower memory usage
+            self.new_data.append([memmap('.new_data' + str(num) + '.npz', dtype=float64, mode='w+', shape=shape)])
 
         self.kx_, self.ky_ = kx_, ky_
 
@@ -142,15 +163,15 @@ class Interpolator(object):
                                               self.hcol_indices[-1])
 
         if first and last:
-            return np.hstack((np.expand_dims(first_column, 1),
-                              data,
-                              np.expand_dims(last_column, 1)))
+            return hstack((expand_dims(first_column, 1),
+                           data,
+                           expand_dims(last_column, 1)))
         elif first:
-            return np.hstack((np.expand_dims(first_column, 1),
-                              data))
+            return hstack((expand_dims(first_column, 1),
+                           data))
         elif last:
-            return np.hstack((data,
-                              np.expand_dims(last_column, 1)))
+            return hstack((data,
+                           expand_dims(last_column, 1)))
         else:
             return data
 
@@ -168,17 +189,18 @@ class Interpolator(object):
             self.tie_data[num] = self._extrapolate_cols(data, first, last)
 
         if first and last:
-            self.col_indices = np.concatenate((np.array([self.hcol_indices[0]]),
-                                               self.col_indices,
-                                               np.array([self.hcol_indices[-1]])))
+            self.col_indices = concatenate((array([self.hcol_indices[0]]),
+                                            self.col_indices,
+                                            array([self.hcol_indices[-1]])))
         elif first:
-            self.col_indices = np.concatenate((np.array([self.hcol_indices[0]]),
-                                               self.col_indices))
+            self.col_indices = concatenate((array([self.hcol_indices[0]]),
+                                            self.col_indices))
         elif last:
-            self.col_indices = np.concatenate((self.col_indices,
-                                               np.array([self.hcol_indices[-1]])))
+            self.col_indices = concatenate((self.col_indices,
+                                            array([self.hcol_indices[-1]])))
 
-    def _extrapolate_rows(self, data, row_indices, first_index, last_index):
+    @staticmethod
+    def _extrapolate_rows(data, row_indices, first_index, last_index):
         """Extrapolate the rows of data, to get the first and last together
         with the data.
         """
@@ -191,9 +213,9 @@ class Interpolator(object):
         last_row = _linear_extrapolate(pos,
                                        (data[-2, :], data[-1, :]),
                                        last_index)
-        return np.vstack((np.expand_dims(first_row, 0),
-                          data,
-                          np.expand_dims(last_row, 0)))
+        return vstack((expand_dims(first_row, 0),
+                       data,
+                       expand_dims(last_row, 0)))
 
     def _fill_row_borders(self):
         """Add the first and last rows to the data by extrapolation.
@@ -208,9 +230,9 @@ class Interpolator(object):
         row_indices = []
 
         for index in range(0, lines, chunk_size):
-            indices = np.logical_and(self.row_indices >= index / factor,
-                                     self.row_indices < (index + chunk_size) / factor)
-            ties = np.argwhere(indices).squeeze()
+            indices = logical_and(self.row_indices >= index / factor,
+                                  self.row_indices < (index + chunk_size) / factor)
+            ties = argwhere(indices).squeeze()
             tiepos = self.row_indices[indices].squeeze()
 
             for num, data in enumerate(self.tie_data):
@@ -222,23 +244,23 @@ class Interpolator(object):
                                                               index],
                                                           self.hrow_indices[index + chunk_size - 1])
                     tmp_data[num].append(extrapolated)
-            row_indices.append(np.array([self.hrow_indices[index]]))
+            row_indices.append(array([self.hrow_indices[index]]))
             row_indices.append(tiepos)
-            row_indices.append(np.array([self.hrow_indices[index
-                                                           + chunk_size - 1]]))
+            row_indices.append(array([self.hrow_indices[index
+                                                        + chunk_size - 1]]))
 
         for num in range(len(self.tie_data)):
-            self.tie_data[num] = np.vstack(tmp_data[num])
-        self.row_indices = np.concatenate(row_indices)
+            self.tie_data[num] = vstack(tmp_data[num])
+        self.row_indices = concatenate(row_indices)
 
     def _interp(self):
         """Interpolate the cartesian coordinates.
         """
-        if np.all(self.hrow_indices == self.row_indices):
+        if all(self.hrow_indices == self.row_indices):
             return self._interp1d()
 
-        xpoints, ypoints = np.meshgrid(self.hrow_indices,
-                                       self.hcol_indices)
+        xpoints, ypoints = meshgrid(self.hrow_indices,
+                                    self.hcol_indices, copy=False)
 
         for num, data in enumerate(self.tie_data):
             spl = RectBivariateSpline(self.row_indices,
@@ -257,14 +279,14 @@ class Interpolator(object):
         lines = len(self.hrow_indices)
 
         for num, data in enumerate(self.tie_data):
-            self.new_data[num] = np.empty((len(self.hrow_indices),
-                                           len(self.hcol_indices)),
-                                          data.dtype)
+            self.new_data[num] = empty((len(self.hrow_indices),
+                                        len(self.hcol_indices)),
+                                       data.dtype)
 
             for cnt in range(lines):
                 tck = splrep(self.col_indices, data[cnt, :], k=self.ky_, s=0)
                 self.new_data[num][cnt, :] = splev(
-                    self.hcol_indices, tck, der=0)
+                        self.hcol_indices, tck, der=0)
 
     def interpolate(self):
         """Do the interpolation, and return resulting longitudes and latitudes.

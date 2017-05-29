@@ -23,11 +23,12 @@
 """Geographical interpolation (lon/lats).
 """
 
-import numpy as np
-from numpy import arccos, sign, rad2deg, sqrt, arcsin, memmap
+from numpy import arccos, sign, rad2deg, sqrt, arcsin, memmap, float64, radians, cos, sin, where, logical_and, less, \
+    greater
 from geotiepoints.interpolator import Interpolator
 
 EARTH_RADIUS = 6370997.0
+
 
 class GeoInterpolator(Interpolator):
     """
@@ -46,6 +47,7 @@ class GeoInterpolator(Interpolator):
     *chunksize* is set, don't forget to adjust the interpolation orders
     accordingly: the interpolation is indeed done globaly (not chunkwise).
     """
+
     def __init__(self, lon_lat_data, *args, **kwargs):
 
         Interpolator.__init__(self, None, *args, **kwargs)
@@ -59,18 +61,16 @@ class GeoInterpolator(Interpolator):
 
         except AttributeError:
             self.set_tiepoints(lon_lat_data[0], lon_lat_data[1])
-            lons_rad = np.radians(self.lon_tiepoint)
-            lats_rad = np.radians(self.lat_tiepoint)
-            x__ = EARTH_RADIUS * np.cos(lats_rad) * np.cos(lons_rad)
-            y__ = EARTH_RADIUS * np.cos(lats_rad) * np.sin(lons_rad)
-            z__ = EARTH_RADIUS * np.sin(lats_rad)
+            lons_rad = radians(self.lon_tiepoint)
+            lats_rad = radians(self.lat_tiepoint)
+            x__ = EARTH_RADIUS * cos(lats_rad) * cos(lons_rad)
+            y__ = EARTH_RADIUS * cos(lats_rad) * sin(lons_rad)
+            z__ = EARTH_RADIUS * sin(lats_rad)
             self.tie_data = [x__, y__, z__]
-
 
         self.new_data = []
         for num in range(len(self.tie_data)):
             self.new_data.append([])
-
 
     def set_tiepoints(self, lon, lat):
         """Defines the lon,lat tie points.
@@ -88,11 +88,13 @@ class GeoInterpolator(Interpolator):
         lat[:] = get_lats_from_cartesian(newx, newy, newz)[:]
         return lon, lat
 
+
 def get_lons_from_cartesian(x__, y__):
     """Get longitudes from cartesian coordinates.
     """
     return rad2deg(arccos(x__ / sqrt(x__ ** 2 + y__ ** 2))) * sign(y__)
-    
+
+
 def get_lats_from_cartesian(x__, y__, z__, thr=0.8):
     """Get latitudes from cartesian coordinates.
     """
@@ -100,11 +102,10 @@ def get_lats_from_cartesian(x__, y__, z__, thr=0.8):
     # latitudes only from z. If we are at high latitudes (close to the poles)
     # then derive the latitude using x and y:
 
-    lats = np.where(np.logical_and(np.less(z__, thr * EARTH_RADIUS), 
-                                   np.greater(z__, -1. * thr * EARTH_RADIUS)),
-                    90 - rad2deg(arccos(z__/EARTH_RADIUS)),
-                    sign(z__) *
-                    (90 - rad2deg(arcsin(sqrt(x__ ** 2 + y__ ** 2)
-                                         / EARTH_RADIUS))))
+    lats = where(logical_and(less(z__, thr * EARTH_RADIUS),
+                             greater(z__, -1. * thr * EARTH_RADIUS)),
+                 90 - rad2deg(arccos(z__ / EARTH_RADIUS)),
+                 sign(z__) *
+                 (90 - rad2deg(arcsin(sqrt(x__ ** 2 + y__ ** 2)
+                                      / EARTH_RADIUS))))
     return lats
-
