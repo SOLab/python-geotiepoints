@@ -24,8 +24,11 @@
 """
 # import tempfile
 
-from numpy import arange, float64, concatenate, hstack, expand_dims, array, vstack, memmap, argwhere, meshgrid, empty, \
-    logical_and, all, asarray
+from numpy import arange, concatenate, hstack, expand_dims, array, vstack, memmap, argwhere, meshgrid, empty, \
+    logical_and, all, asarray, diff, log2
+
+from numpy import uint8, uint16, uint32, uint64, float64, float32
+
 from scipy.interpolate import RectBivariateSpline, splev, splrep
 
 
@@ -111,16 +114,36 @@ class Interpolator(object):
         if isinstance(self.hcol_indices, (tuple, list)):
             self.hcol_indices = asarray(self.hcol_indices)
 
-        # convert indices to uint16 (0 to 65535) to save up to 20% of memory
-        self.row_indices = self.row_indices.astype('uint16')
-        self.col_indices = self.col_indices.astype('uint16')
-        self.hrow_indices = self.hrow_indices.astype('uint16')
-        self.hcol_indices = self.hcol_indices.astype('uint16')
+        # convert indices to uint to save up to 20% of memory
+        # get max size of row/cell
+        max_size = max(self.col_indices.max(), self.row_indices.max())
+        max_size_h = max(self.hcol_indices.size, self.hrow_indices.size)
+        # choose best dtype for indices
+        data_type = self.choose_dtype(max_size)
+        data_type_h = self.choose_dtype(max_size_h)
+
+        self.row_indices = self.row_indices.astype(data_type)
+        self.col_indices = self.col_indices.astype(data_type)
+        self.hrow_indices = self.hrow_indices.astype(data_type_h)
+        self.hcol_indices = self.hcol_indices.astype(data_type_h)
 
         if not isinstance(data, (tuple, list)):
             self.tie_data = [data]
         else:
             self.tie_data = list(data)
+
+        # TODO: choose best data type depending on indices step
+        max_step = max(diff(self.hrow_indices).min(), diff(self.hcol_indices).min())
+        max_size = log2(self.hcol_indices.size * self.hrow_indices.size)
+        # max image size 3000x3000 corresponds to log2(3000*3000) ~= 23.1
+        if max_size > 23 and max_step <= 2:
+            for num in range(len(self.tie_data)):
+                if self.tie_data[num] is not None:
+                    self.tie_data[num] = self.tie_data.astype(float64)
+        else:
+            for num in range(len(self.tie_data)):
+                if self.tie_data[num] is not None:
+                    self.tie_data[num] = self.tie_data.astype(float32)
 
         # shape = (len(self.hrow_indices), len(self.hcol_indices))
         # self.new_data = []
@@ -134,7 +157,6 @@ class Interpolator(object):
         self.new_data = []
         for num in range(len(self.tie_data)):
             self.new_data.append([])
-
 
         self.kx_, self.ky_ = kx_, ky_
 
@@ -282,6 +304,7 @@ class Interpolator(object):
 
             self.new_data[num] = spl.ev(xpoints.ravel(), ypoints.ravel())
             self.new_data[num] = self.new_data[num].reshape(xpoints.shape).T
+            self.new_data[num] = self.new_data[num].astype(data.dtype)  # get it back to initial data type
 
     def _interp1d(self):
         """Interpolate in one dimension.
@@ -304,3 +327,15 @@ class Interpolator(object):
         self._interp()
 
         return self.new_data
+
+    @staticmethod
+    def choose_dtype(N):
+        """
+        
+        :param N: 
+        :return: 
+        """
+        for dtype in [uint8, uint16, uint32, uint64]:
+            if N <= dtype(-1):
+                return dtype
+        raise AssertionError('{} is really big!'.format(N))
