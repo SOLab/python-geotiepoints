@@ -85,15 +85,18 @@ class GeoInterpolator(Interpolator):
         shape = newx.shape
         # lat_f = tempfile.NamedTemporaryFile(dir='/home/mag/Documents/repos/solab/PySOL/notebooks/POSADA/')
         lat_f = tempfile.NamedTemporaryFile()
-        lat_f.name = '.lats.npz'
+        lat_f.name = '/tmp/.lats.npz'
         lat = memmap(lat_f.name, dtype=float64, mode='w+', shape=shape)
         # lon_f = tempfile.NamedTemporaryFile(dir='/home/mag/Documents/repos/solab/PySOL/notebooks/POSADA/')
         lon_f = tempfile.NamedTemporaryFile()
-        lon_f.name = '.lons.npz'
+        lon_f.name = '/tmp/.lons.npz'
         lon = memmap(lon_f.name, dtype=float64, mode='w+', shape=shape)
 
         lon[:] = get_lons_from_cartesian(newx, newy)[:]
         lat[:] = get_lats_from_cartesian(newx, newy, newz)[:]
+        # Write any changes in the array to the file on disk
+        lat.flush()
+        lon.flush()
         return lon, lat
 
 
