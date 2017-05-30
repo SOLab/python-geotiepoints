@@ -25,7 +25,8 @@
 import tempfile
 
 from numpy import arccos, sign, rad2deg, sqrt, arcsin, memmap, float64, radians, cos, sin, where, logical_and, less, \
-    greater
+    greater, diff, log2, float64, float32
+
 from geotiepoints.interpolator import Interpolator
 
 EARTH_RADIUS = 6370997.0
@@ -72,6 +73,42 @@ class GeoInterpolator(Interpolator):
         self.new_data = []
         for num in range(len(self.tie_data)):
             self.new_data.append([])
+
+        # Check indices to be an array
+        if isinstance(self.row_indices, (tuple, list)):
+            self.row_indices = asarray(self.row_indices)
+        if isinstance(self.col_indices, (tuple, list)):
+            self.col_indices = asarray(self.col_indices)
+        if isinstance(self.hrow_indices, (tuple, list)):
+            self.hrow_indices = asarray(self.hrow_indices)
+        if isinstance(self.hcol_indices, (tuple, list)):
+            self.hcol_indices = asarray(self.hcol_indices)
+
+        # convert indices to uint to save up to 20% of memory
+        # get max size of row/cell
+        max_size = max(self.col_indices.max(), self.row_indices.max())
+        max_size_h = max(self.hcol_indices.size, self.hrow_indices.size)
+        # choose best dtype for indices
+        data_type = self.choose_dtype(max_size)
+        data_type_h = self.choose_dtype(max_size_h)
+
+        self.row_indices = self.row_indices.astype(data_type)
+        self.col_indices = self.col_indices.astype(data_type)
+        self.hrow_indices = self.hrow_indices.astype(data_type_h)
+        self.hcol_indices = self.hcol_indices.astype(data_type_h)
+
+        # TODO: choose best data type depending on indices step
+        max_step = max(diff(self.hrow_indices).min(), diff(self.hcol_indices).min())
+        max_size = log2(self.hcol_indices.size * self.hrow_indices.size)
+        # max image size 3000x3000 corresponds to log2(3000*3000) ~= 23.1
+        if max_size > 23 and max_step <= 2:
+            for num in range(len(self.tie_data)):
+                if self.tie_data[num] is not None:
+                    self.tie_data[num] = self.tie_data[num].astype(float64)
+        else:
+            for num in range(len(self.tie_data)):
+                if self.tie_data[num] is not None:
+                    self.tie_data[num] = self.tie_data[num].astype(float32)
 
     def set_tiepoints(self, lon, lat):
         """Defines the lon,lat tie points.

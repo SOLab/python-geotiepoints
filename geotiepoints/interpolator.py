@@ -139,11 +139,11 @@ class Interpolator(object):
         if max_size > 23 and max_step <= 2:
             for num in range(len(self.tie_data)):
                 if self.tie_data[num] is not None:
-                    self.tie_data[num] = self.tie_data.astype(float64)
+                    self.tie_data[num] = self.tie_data[num].astype(float64)
         else:
             for num in range(len(self.tie_data)):
                 if self.tie_data[num] is not None:
-                    self.tie_data[num] = self.tie_data.astype(float32)
+                    self.tie_data[num] = self.tie_data[num].astype(float32)
 
         # shape = (len(self.hrow_indices), len(self.hcol_indices))
         # self.new_data = []
