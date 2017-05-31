@@ -31,7 +31,7 @@ from setuptools import setup
 
 test_requires = []
 
-setup(name='solab-geotiepoints',
+setup(name='solab_geotiepoints',
       version="v1.1.0",
       description='Interpolation of geographic tiepoints in Python',
       author='Adam Dybbroe, Martin Raspaud, Alexander Myasoedov',
@@ -43,7 +43,7 @@ setup(name='solab-geotiepoints',
                    "Operating System :: OS Independent",
                    "Programming Language :: Python",
                    "Topic :: Scientific/Engineering"],
-      url="https://github.com/adybbroe/python-geotiepoints",
+      url="https://github.com/SOLab/python-geotiepoints/",
       packages=['geotiepoints'],
 
       cmdclass={'build_ext': build_ext},
