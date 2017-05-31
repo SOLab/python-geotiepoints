@@ -24,17 +24,18 @@
 """Setting up the geo_interpolator project.
 """
 
-from setuptools import setup
 from distutils.extension import Extension
+
 from Cython.Distutils import build_ext
+from setuptools import setup
 
 test_requires = []
 
-setup(name='python-geotiepoints',
+setup(name='solab-geotiepoints',
       version="v1.1.0",
       description='Interpolation of geographic tiepoints in Python',
-      author='Adam Dybbroe, Martin Raspaud',
-      author_email='martin.raspaud@smhi.se',
+      author='Adam Dybbroe, Martin Raspaud, Alexander Myasoedov',
+      author_email='martin.raspaud@smhi.se, mag@rshu.ru',
       classifiers=["Development Status :: 4 - Beta",
                    "Intended Audience :: Science/Research",
                    "License :: OSI Approved :: GNU General Public License v3 " +
@@ -50,9 +51,9 @@ setup(name='python-geotiepoints',
       ext_modules=[
 
           Extension(
-              'geotiepoints.multilinear_cython',
-              ['geotiepoints/multilinear_cython.pyx'],
-              extra_compile_args=['-O3']
+                  'geotiepoints.multilinear_cython',
+                  ['geotiepoints/multilinear_cython.pyx'],
+                  extra_compile_args=['-O3']
           ),
       ],
 
