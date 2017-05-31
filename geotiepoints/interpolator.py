@@ -133,8 +133,12 @@ class Interpolator(object):
             self.tie_data = list(data)
 
         # TODO: choose best data type depending on indices step
-        max_step = max(diff(self.hrow_indices).min(), diff(self.hcol_indices).min())
-        max_size = log2(self.hcol_indices.size * self.hrow_indices.size)
+        # check size is enough for diff
+        if self.hrow_indices.size > 2 and self.hcol_indices.size > 2:
+            max_step = max(diff(self.hrow_indices).min(), diff(self.hcol_indices).min())
+            max_size = log2(self.hcol_indices.size * self.hrow_indices.size)
+        else:
+            max_step = max_size = 1
         # max image size 3000x3000 corresponds to log2(3000*3000) ~= 23.1
         if max_size > 23 and max_step <= 2:
             for num in range(len(self.tie_data)):
