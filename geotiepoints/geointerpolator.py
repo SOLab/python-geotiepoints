@@ -126,11 +126,11 @@ class GeoInterpolator(Interpolator):
         shape = newx.shape
         # lat_f = tempfile.NamedTemporaryFile(dir='/home/mag/Documents/repos/solab/PySOL/notebooks/POSADA/')
         lat_f = tempfile.NamedTemporaryFile()
-        lat_f.name = '/tmp/.lats.npz'
+        # lat_f.name = '/tmp/.lats.npz'
         lat = memmap(lat_f.name, dtype=newx.dtype, mode='w+', shape=shape)
         # lon_f = tempfile.NamedTemporaryFile(dir='/home/mag/Documents/repos/solab/PySOL/notebooks/POSADA/')
         lon_f = tempfile.NamedTemporaryFile()
-        lon_f.name = '/tmp/.lons.npz'
+        # lon_f.name = '/tmp/.lons.npz'
         lon = memmap(lon_f.name, dtype=newx.dtype, mode='w+', shape=shape)
 
         lon[:] = get_lons_from_cartesian(newx, newy)[:]
