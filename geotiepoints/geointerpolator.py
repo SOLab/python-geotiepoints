@@ -87,7 +87,7 @@ class GeoInterpolator(Interpolator):
         # convert indices to uint to save up to 20% of memory
         # get max size of row/cell
         max_size = max(self.col_indices.max(), self.row_indices.max())
-        max_size_h = max(self.hcol_indices.size, self.hrow_indices.size)
+        max_size_h = max(self.hcol_indices.max(), self.hrow_indices.max())
         # choose best dtype for indices
         data_type = self.choose_dtype(max_size)
         data_type_h = self.choose_dtype(max_size_h)
@@ -101,7 +101,7 @@ class GeoInterpolator(Interpolator):
         # check size is enough for diff
         if self.hrow_indices.size > 2 and self.hcol_indices.size > 2:
             max_step = max(diff(self.hrow_indices).min(), diff(self.hcol_indices).min())
-            max_size = log2(self.hcol_indices.size * self.hrow_indices.size)
+            max_size = log2(self.hcol_indices.max() * self.hrow_indices.max())
         else:
             max_step = max_size = 1
         # max image size 3000x3000 corresponds to log2(3000*3000) ~= 23.1
